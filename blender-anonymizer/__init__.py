@@ -1,7 +1,7 @@
 bl_info = {
     "name": "Blender Anonymizer",
     "author": "Hideki Saito",
-    "version": (1, 1, 0),
+    "version": (1, 0, 0),
     "blender": (3, 0, 0),
     "location": "File > External Data > Sanitize Paths",
     "description": "Normalize and anonymize file paths in the current .blend",
