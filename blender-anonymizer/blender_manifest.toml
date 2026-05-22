@@ -1,0 +1,16 @@
+schema_version = "1.0.0"
+
+id = "blender_anonymizer"
+version = "1.0.0"
+name = "Blender Anonymizer"
+tagline = "Sanitize Paths in .blend"
+maintainer = "Hideki Saito"
+type = "add-on"
+
+blender_version_min = "4.2.0"
+
+license = ["SPDX:GPL-2.0-or-later"]
+
+website = "https://github.com/hsaito/blender-anonymizer"
+documentation = "https://github.com/hsaito/blender-anonymizer/blob/master/README.md"
+tracker = "https://github.com/hsaito/blender-anonymizer/issues"
