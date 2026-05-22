@@ -39,20 +39,41 @@ HOME_DIR = os.path.expanduser("~")
 
 
 def sanitize_path(path: str, placeholder: str) -> str:
-    """Normalize and anonymize paths containing user-specific information"""
+    """Normalize and anonymize paths containing user-specific information (robust version)"""
     if not path:
         return path
 
-    abs_path = bpy.path.abspath(path)
+    try:
+        abs_path = bpy.path.abspath(path)
+    except Exception:
+        # For paths that Blender cannot resolve, return as is
+        return path
 
     # Home directory → Placeholder
     if abs_path.startswith(HOME_DIR):
         rel_from_home = os.path.relpath(abs_path, HOME_DIR)
-        sanitized = os.path.join(placeholder, rel_from_home)
-    else:
-        sanitized = bpy.path.relpath(abs_path)
+        return os.path.join(placeholder, rel_from_home)
 
-    return sanitized
+    # .blend file location
+    blend_dir = os.path.dirname(bpy.data.filepath)
+
+    # If .blend is unsaved, cannot make relative paths
+    if not blend_dir:
+        return abs_path
+
+    # If on a different drive, cannot make relative paths, return absolute path
+    if os.path.splitdrive(abs_path)[0].lower() != os.path.splitdrive(blend_dir)[0].lower():
+        return abs_path  # <- This one's important
+
+    # Convert to relative path (safely handle exceptions)
+    try:
+        rel = bpy.path.relpath(abs_path)
+        return rel
+    except ValueError:
+        # If relpath fails, return absolute path
+        return abs_path
+    except Exception:
+        return abs_path
 
 
 def sanitize_all_paths(placeholder: str):
@@ -85,7 +106,17 @@ def sanitize_all_paths(placeholder: str):
     # Sequencer
     seq = scene.sequence_editor
     if seq:
-        for strip in seq.sequences_all:
+        # Blender 4.x: sequences_all
+        if hasattr(seq, "sequences_all"):
+            strips = seq.sequences_all
+        # Blender 5.x: sequences
+        elif hasattr(seq, "sequences"):
+            strips = seq.sequences
+        # Neither available (empty sequencer in Blender 5.1)
+        else:
+            strips = []
+
+        for strip in strips:
             if hasattr(strip, "filepath") and strip.filepath:
                 strip.filepath = sanitize_path(strip.filepath, placeholder)
 
