@@ -10,6 +10,7 @@ It helps when sharing project files by replacing user-specific home directory se
 - Replaces paths under your home directory with a placeholder (default: `//USER_HOME`).
 - Converts non-home absolute paths to project-relative Blender paths when possible.
 - Scans text datablocks and replaces any raw home directory string with the placeholder.
+- Runs a preflight safety check and cancels if non-packed external references are found.
 
 ### Data Types Covered
 
@@ -84,6 +85,7 @@ With placeholder `//USER_HOME`, output becomes:
 - This does not copy/move external files; it only rewrites path strings.
 - Relative-path conversion depends on Blender path resolution and your current project location.
 - If a path is outside your home directory, it is normalized to Blender relative format when possible.
+- If non-packed external references exist (for example images, sounds, movie clips, linked libraries, or sequencer strips), the operation is cancelled with a warning because rewriting paths could break those references.
 
 ## Development
 

@@ -1,7 +1,7 @@
 bl_info = {
     "name": "Blender Anonymizer",
     "author": "Hideki Saito",
-    "version": (1, 0, 0),
+    "version": (1, 1, 0),
     "blender": (3, 0, 0),
     "location": "File > External Data > Sanitize Paths",
     "description": "Normalize and anonymize file paths in the current .blend",
@@ -36,6 +36,59 @@ class SanitizePathsPreferences(bpy.types.AddonPreferences):
 # ==============================
 
 HOME_DIR = os.path.expanduser("~")
+
+
+def _is_datablock_packed(datablock) -> bool:
+    """Best-effort packed check for datablocks that support packing."""
+    packed_file = getattr(datablock, "packed_file", None)
+    if packed_file is not None:
+        return True
+
+    packed_files = getattr(datablock, "packed_files", None)
+    if packed_files:
+        try:
+            return len(packed_files) > 0
+        except Exception:
+            return True
+
+    return False
+
+
+def find_non_packed_references():
+    """Collect external data references that are not packed into the .blend file."""
+    refs = []
+
+    for img in bpy.data.images:
+        if img.source == 'FILE' and img.filepath and not _is_datablock_packed(img):
+            refs.append(f"Image: {img.name}")
+
+    for snd in bpy.data.sounds:
+        if snd.filepath and not _is_datablock_packed(snd):
+            refs.append(f"Sound: {snd.name}")
+
+    for clip in bpy.data.movieclips:
+        if clip.filepath and not _is_datablock_packed(clip):
+            refs.append(f"Movie Clip: {clip.name}")
+
+    for lib in bpy.data.libraries:
+        if lib.filepath:
+            refs.append(f"Library: {lib.filepath}")
+
+    scene = bpy.context.scene
+    seq = scene.sequence_editor
+    if seq:
+        if hasattr(seq, "sequences_all"):
+            strips = seq.sequences_all
+        elif hasattr(seq, "sequences"):
+            strips = seq.sequences
+        else:
+            strips = []
+
+        for strip in strips:
+            if hasattr(strip, "filepath") and strip.filepath:
+                refs.append(f"Sequencer Strip: {strip.name}")
+
+    return refs
 
 
 def sanitize_path(path: str, placeholder: str) -> str:
@@ -140,6 +193,21 @@ class SANITIZEPATHS_OT_run(bpy.types.Operator):
     bl_description = "Normalize and anonymize file paths in the current .blend"
 
     def execute(self, context):
+        non_packed_refs = find_non_packed_references()
+        if non_packed_refs:
+            preview = ", ".join(non_packed_refs[:3])
+            if len(non_packed_refs) > 3:
+                preview += ", ..."
+            self.report(
+                {'WARNING'},
+                (
+                    "Operation cancelled: non-packed external data was found. "
+                    "Sanitizing paths would break references. "
+                    f"Examples: {preview}"
+                ),
+            )
+            return {'CANCELLED'}
+
         prefs = bpy.context.preferences.addons[__name__].preferences
         placeholder = prefs.home_placeholder
 
