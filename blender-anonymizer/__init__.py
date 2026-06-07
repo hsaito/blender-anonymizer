@@ -11,7 +11,7 @@ bl_info = {
 import bpy
 import os
 import re
-
+from bpy.app.translations import pgettext_iface as _
 
 # ==============================
 # Addon Preferences
@@ -198,21 +198,24 @@ class SANITIZEPATHS_OT_run(bpy.types.Operator):
             preview = ", ".join(non_packed_refs[:3])
             if len(non_packed_refs) > 3:
                 preview += ", ..."
-            self.report(
-                {'WARNING'},
-                (
-                    "Operation cancelled: non-packed external data was found. "
-                    "Sanitizing paths would break references. "
-                    f"Examples: {preview}"
-                ),
+            msg = (
+                _("Operation cancelled: non-packed external data was found.") + " " +
+                _("Sanitizing paths would break references.") + " " +
+                _("Examples: {preview}").format(preview=preview)
             )
+            self.report({'WARNING'}, msg)
             return {'CANCELLED'}
 
         prefs = bpy.context.preferences.addons[__name__].preferences
         placeholder = prefs.home_placeholder
 
         sanitize_all_paths(placeholder)
-        self.report({'INFO'}, f"Paths sanitized using placeholder: {placeholder}")
+        self.report(
+            {'INFO'},
+            _("Paths sanitized using placeholder: {placeholder}").format(
+                placeholder=placeholder
+            )
+        )
         return {'FINISHED'}
 
 
@@ -221,8 +224,32 @@ class SANITIZEPATHS_OT_run(bpy.types.Operator):
 # ==============================
 
 def menu_func(self, context):
-    self.layout.operator(SANITIZEPATHS_OT_run.bl_idname, icon='FILE_REFRESH')
+    self.layout.operator(
+        SANITIZEPATHS_OT_run.bl_idname,
+        text=_("Sanitize Paths"),
+        icon='FILE_REFRESH'
+    )
 
+# =========================================================
+# Translation Dictionary（日本語）
+# =========================================================
+
+translation_dict = {
+    "ja_JP": {
+        # Operator ラベル・説明
+        ("*", "Placeholder for Home Directory"): "ホームディレクトリのプレースホルダー",
+        ("*", "String used to replace the user's home directory in paths"):
+            "パス内のユーザーのホームディレクトリを置き換えるために使用される文字列",
+        ("*", "Sanitize Paths"): "パスを匿名化",
+        ("*", "Normalize and anonymize file paths in the current .blend"): "現在の.blendファイル内のファイルパスを正規化および匿名化します",
+
+        # メッセージ
+        ("*", "Operation cancelled: non-packed external data was found."): "操作がキャンセルされました：パックされていない外部データが見つかりました。",
+        ("*", "Sanitizing paths would break references."): "パスを匿名化すると参照が壊れる可能性があります。",
+        ("*", "Examples: {preview}"): "例: {preview}",
+        ("*", "Paths sanitized using placeholder: {placeholder}"): "プレースホルダーを使用してパスが匿名化されました: {placeholder}",
+    }
+}
 
 # ==============================
 # Register
@@ -237,9 +264,11 @@ def register():
     for cls in classes:
         bpy.utils.register_class(cls)
     bpy.types.TOPBAR_MT_file_external_data.append(menu_func)
+    bpy.app.translations.register(__name__, translation_dict)
 
 
 def unregister():
+    bpy.app.translations.unregister(__name__)
     bpy.types.TOPBAR_MT_file_external_data.remove(menu_func)
     for cls in reversed(classes):
         bpy.utils.unregister_class(cls)
